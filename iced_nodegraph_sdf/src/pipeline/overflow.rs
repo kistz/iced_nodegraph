@@ -114,7 +114,7 @@ impl Readback {
             _ => {
                 let f = self.in_flight.take().expect("state checked above");
                 let report = {
-                    let data = f.buffer.slice(..f.used).get_mapped_range();
+                    let data = f.buffer.slice(..f.used).get_mapped_range().unwrap();
                     reduce(&data)
                 };
                 f.buffer.unmap();

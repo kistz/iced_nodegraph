@@ -162,20 +162,20 @@ where
         self.draw_impl(tree, renderer, theme, style, layout, cursor, viewport);
     }
 
-    fn size_hint(&self) -> Size<Length> {
+    /* fn size_hint(&self) -> Size<Length> {
         self.size()
-    }
+    } */
 
-    fn children(&self) -> Vec<Tree> {
+    /* fn children(&self) -> Vec<Tree> {
         self.elements_iter()
             .map(|(_, element)| Tree::new(element))
             .collect()
-    }
+    } */
 
-    fn diff(&self, tree: &mut Tree) {
-        let children: Vec<&Element<'_, Message, Theme, Renderer>> =
-            self.elements_iter().map(|(_, e)| e).collect();
-        tree.diff_children(&children);
+    fn diff(&mut self, tree: &mut Tree) {
+        let mut children: Vec<&mut Element<'_, Message, Theme, Renderer>> =
+            self.elements_iter_mut().map(|(_, e)| e).collect();
+        tree.diff_children(&mut children);
     }
 
     fn operate(
@@ -251,7 +251,6 @@ where
         layout: Layout<'_>,
         screen_cursor: mouse::Cursor,
         renderer: &Renderer,
-        clipboard: &mut dyn Clipboard,
         shell: &mut Shell<'_, Message>,
         viewport: &Rectangle,
     ) {
@@ -261,7 +260,6 @@ where
             layout,
             screen_cursor,
             renderer,
-            clipboard,
             shell,
             viewport,
         );

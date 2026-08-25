@@ -216,7 +216,7 @@ impl App {
         let theme = self.theme();
         let p = &self.positions;
         // Header colors keyed on node role, derived from the active theme palette.
-        let pal = theme.extended_palette();
+        let pal = theme.palette();
         let input_bg = pal.primary.base.color;
         let process_bg = pal.success.base.color;
         let output_bg = pal.secondary.base.color;

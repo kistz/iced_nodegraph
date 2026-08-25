@@ -69,13 +69,12 @@ where
         layout: Layout<'_>,
         cursor: mouse::Cursor,
         renderer: &Renderer,
-        clipboard: &mut dyn Clipboard,
         shell: &mut Shell<'_, Message>,
     ) {
         let cursor = self.camera.cursor_screen_to_layout(cursor);
         self.content
             .as_overlay_mut()
-            .update(event, layout, cursor, renderer, clipboard, shell);
+            .update(event, layout, cursor, renderer, shell);
     }
 
     fn mouse_interaction(

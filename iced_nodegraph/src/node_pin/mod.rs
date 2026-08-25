@@ -335,10 +335,6 @@ where
         self.content.as_widget().size()
     }
 
-    fn children(&self) -> Vec<Tree> {
-        vec![Tree::new(&self.content)]
-    }
-
     fn layout(
         &mut self,
         tree: &mut Tree,
@@ -364,7 +360,6 @@ where
         layout: Layout<'_>,
         cursor: mouse::Cursor,
         renderer: &Renderer,
-        clipboard: &mut dyn Clipboard,
         shell: &mut Shell<'_, Message>,
         viewport: &Rectangle,
     ) {
@@ -384,7 +379,6 @@ where
                 child_layout,
                 cursor,
                 renderer,
-                clipboard,
                 shell,
                 viewport,
             );
@@ -437,11 +431,7 @@ where
         }
     }
 
-    fn size_hint(&self) -> Size<Length> {
-        self.content.as_widget().size_hint()
-    }
-
-    fn diff(&self, tree: &mut Tree) {
+    fn diff(&mut self, tree: &mut Tree) {
         // Reconcile through `Tree::diff_children`, never by calling the content's
         // own `diff` directly: only the former compares widget tags and rebuilds
         // state whose type changed. Diffing the content directly left a stale
@@ -449,7 +439,7 @@ where
         // changed at the same tree position -- which happens as soon as a node is
         // removed from the middle of the graph, since node trees are reconciled by
         // position. The next access downcast that state and panicked.
-        tree.diff_children(std::slice::from_ref(&self.content));
+        tree.diff_children(&mut [&mut self.content]);
     }
 }
 
@@ -552,11 +542,11 @@ mod tests {
 
         let stateless: Element<'_, (), Theme, iced::Renderer> =
             node_pin(PinSide::Left, 0usize, text("y")).into();
-        tree.diff(&stateless);
+        assert_eq!(tree.children[0].tag, Tree::new(&stateless).children[0].tag);
+        tree.diff(stateless);
 
         assert_eq!(tree.children.len(), 1);
         assert_ne!(tree.children[0].tag, stateful_tag);
-        assert_eq!(tree.children[0].tag, Tree::new(&stateless).children[0].tag);
     }
 
     /// The pin's own state survives a content change: the pin tag is the same,
@@ -568,7 +558,7 @@ mod tests {
         let mut tree = Tree::new(&before);
         let after: Element<'_, (), Theme, iced::Renderer> =
             node_pin(PinSide::Left, 7usize, text_input("", "b")).into();
-        tree.diff(&after);
+        tree.diff(after);
 
         assert_eq!(tree.tag, tree::Tag::of::<NodePinState<usize, ()>>());
         assert_eq!(

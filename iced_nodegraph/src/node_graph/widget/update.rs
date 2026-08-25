@@ -58,7 +58,6 @@ where
         layout: Layout<'_>,
         screen_cursor: mouse::Cursor,
         renderer: &Renderer,
-        clipboard: &mut dyn Clipboard,
         shell: &mut Shell<'_, Message>,
         viewport: &Rectangle,
     ) {
@@ -448,7 +447,6 @@ where
                             child_layout,
                             world_cursor,
                             renderer,
-                            clipboard,
                             ctx.shell,
                             viewport,
                         );
