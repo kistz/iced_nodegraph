@@ -111,6 +111,13 @@ impl renderer::Renderer for Recorder {
         _callback: impl FnOnce(Result<image::Allocation, image::Error>) + Send + 'static,
     ) {
     }
+    fn hint(&mut self, _scale: renderer::Scale) {}
+    fn scale(&self) -> Option<renderer::Scale> {
+        None
+    }
+    fn settings(&self) -> renderer::Settings {
+        renderer::Settings::default()
+    }
 }
 
 impl text::Renderer for Recorder {

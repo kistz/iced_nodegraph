@@ -17,7 +17,6 @@ pub mod record;
 
 use std::sync::{Mutex, MutexGuard, OnceLock};
 
-use iced::{Font, Pixels};
 use iced_wgpu::graphics::Shell;
 use iced_wgpu::wgpu;
 use iced_wgpu::{Engine, Renderer};
@@ -41,14 +40,15 @@ pub fn shared() -> Option<MutexGuard<'static, Renderer>> {
 /// A headless `iced_wgpu::Renderer`, or `None` when no GPU adapter is available
 /// (so the suite skips instead of failing on a GPU-less CI box).
 fn headless_renderer() -> Option<Renderer> {
-    let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
+    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
         backends: wgpu::Backends::all(),
-        ..Default::default()
+        ..wgpu::InstanceDescriptor::new_without_display_handle()
     });
     let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
         power_preference: wgpu::PowerPreference::LowPower,
         compatible_surface: None,
         force_fallback_adapter: false,
+        apply_limit_buckets: false,
     }))
     .ok()?;
     let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
@@ -71,5 +71,8 @@ fn headless_renderer() -> Option<Renderer> {
         None,
         Shell::headless(),
     );
-    Some(Renderer::new(engine, Font::default(), Pixels(16.0)))
+    Some(Renderer::new(
+        engine,
+        iced::advanced::renderer::Settings::default(),
+    ))
 }
