@@ -66,7 +66,7 @@ use crate::{
         PinStyle, TilingKind, default_cutting_tool_style, default_selection_box_style,
     },
 };
-use iced_nodegraph_sdf::{Pattern, SdfPrimitive, Shape, Style, Tiling};
+use iced_nodegraph_sdf::{PathSeg, Pattern, SdfPrimitive, Shape, Style, Tiling};
 
 mod camera_overlay;
 mod draw;

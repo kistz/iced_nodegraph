@@ -22,7 +22,7 @@ use iced_widget::core::Color;
 
 use crate::node_pin::PinDirection;
 
-use super::{EdgeStyle, NodeStyle, PinFill, PinShape, PinStyle};
+use super::{EdgeStyle, NodeStyle, PinFill, PinStyle};
 
 /// Same color with zero alpha.
 fn transparent(c: Color) -> Color {
@@ -238,13 +238,7 @@ impl PinStyle {
             PinFill::Ring => true,
         };
         let fill = if ring {
-            // The halves of a split indicator are narrow, a ring as wide as
-            // the one of a circle would close them up.
-            let width = match self.shape {
-                PinShape::Split => indicator_r * 0.4,
-                PinShape::Circle | PinShape::Square => indicator_r * 0.8,
-            };
-            Style::quad_stroke(&self.color, Pattern::solid(width))
+            Style::quad_stroke(&self.color, Pattern::solid(indicator_r * 0.8))
         } else {
             Style::quad_band(&self.color, -1e6, 0.0)
         };

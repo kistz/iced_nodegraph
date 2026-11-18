@@ -207,6 +207,7 @@ pub use style::{
     NodeStatus,
     // Node/edge/pin style types (concrete; override via struct-update over defaults)
     NodeStyle,
+    PinBrackets,
     PinFill,
     PinShape,
     PinStatus,

@@ -16,6 +16,79 @@ use iced_widget::core::{Border, Shadow};
 /// its neighbours.
 const SQUARE_HALF_EXTENT: f32 = 0.886_226_9;
 
+/// Geometry of [`PinBrackets`](crate::PinBrackets), as fractions of
+/// [`PinStyle::radius`]: the gap between the indicator and a bracket, half
+/// the height of a bracket, how deep its ends (and the point of a brace)
+/// reach, and the width of its stroke.
+const BRACKET_GAP: f32 = 0.6;
+const BRACKET_HALF_HEIGHT: f32 = 1.5;
+const BRACKET_DEPTH: f32 = 0.55;
+const BRACKET_STROKE: f32 = 0.3;
+
+/// The left and the right bracket around an indicator of radius `r`
+/// centred on the origin, and how far from the origin they reach.
+fn bracket_shapes(brackets: crate::PinBrackets, r: f32) -> Option<([Shape; 2], f32)> {
+    let x = r * (1.0 + BRACKET_GAP);
+    let h = r * BRACKET_HALF_HEIGHT;
+    let a = r * BRACKET_DEPTH;
+    let reach = match brackets {
+        crate::PinBrackets::None => return None,
+        crate::PinBrackets::Square => x,
+        crate::PinBrackets::Curly => x + a,
+    }
+    .max(h)
+        + r * BRACKET_STROKE * 0.5;
+    // `side` is -1 for the left bracket and 1 for the right one; `inward`
+    // points from a bracket towards the indicator.
+    let make = |side: f32| -> Shape {
+        let inward = -side;
+        let at = |dx: f32, y: f32| [side * x + dx, y];
+        if brackets == crate::PinBrackets::Square {
+            return Shape::path(
+                at(inward * a, -h),
+                [
+                    PathSeg::Line { to: at(0.0, -h) },
+                    PathSeg::Line { to: at(0.0, h) },
+                    PathSeg::Line {
+                        to: at(inward * a, h),
+                    },
+                ],
+            );
+        }
+        // Rounded ends, straight flanks, and a point in the middle which
+        // faces away from the indicator.
+        let out = -inward * a;
+        Shape::path(
+            at(inward * a, -h),
+            [
+                PathSeg::Bezier {
+                    c1: at(0.0, -h),
+                    c2: at(0.0, -h),
+                    to: at(0.0, -h + a),
+                },
+                PathSeg::Line { to: at(0.0, -a) },
+                PathSeg::Bezier {
+                    c1: at(0.0, -a * 0.3),
+                    c2: at(out * 0.4, 0.0),
+                    to: at(out, 0.0),
+                },
+                PathSeg::Bezier {
+                    c1: at(out * 0.4, 0.0),
+                    c2: at(0.0, a * 0.3),
+                    to: at(0.0, a),
+                },
+                PathSeg::Line { to: at(0.0, h - a) },
+                PathSeg::Bezier {
+                    c1: at(0.0, h),
+                    c2: at(0.0, h),
+                    to: at(inward * a, h),
+                },
+            ],
+        )
+    };
+    Some(([make(-1.0), make(1.0)], reach))
+}
+
 /// Intersects a shape's screen bounds with the widget's layout rectangle.
 ///
 /// `None` means the shape is entirely off-screen, so the caller can skip it.
@@ -1021,29 +1094,22 @@ where
                     // Pin shapes are centred on the pin, and so is every
                     // primitive's origin, so the placement is just the pin
                     // position - and identical pins share a recipe.
-                    let h = indicator_r * SQUARE_HALF_EXTENT;
-                    let pin_parts: [Option<(Shape, [f32; 2])>; 2] = match pin_style.shape {
-                        crate::style::PinShape::Square => [
-                            Some((Shape::rounded_box([2.0 * h, 2.0 * h], [0.0; 4]), pw)),
-                            None,
-                        ],
-                        crate::style::PinShape::Circle => {
-                            [Some((Shape::circle(indicator_r), pw)), None]
+                    let (pin_shape, pin_place) = match pin_style.shape {
+                        crate::style::PinShape::Square => {
+                            let h = indicator_r * SQUARE_HALF_EXTENT;
+                            (Shape::rounded_box([2.0 * h, 2.0 * h], [0.0; 4]), pw)
                         }
-                        // Two halves of the square, the gap between them a
-                        // fifth of its width.
-                        crate::style::PinShape::Split => {
-                            let half = Shape::rounded_box([0.8 * h, 2.0 * h], [0.0; 4]);
-                            let side = |sign: f32| [pw[0] + sign * 0.6 * h, pw[1]];
-                            [Some((half.clone(), side(-1.0))), Some((half, side(1.0)))]
-                        }
+                        crate::style::PinShape::Circle => (Shape::circle(indicator_r), pw),
                     };
+                    let brackets = bracket_shapes(pin_style.brackets, indicator_r);
 
                     let pin_layers = pin_style.sdf_layers(pin_state.direction, indicator_r);
                     // Bounds: shape radius plus the largest layer extent beyond
                     // the shape boundary (input ring, border ring). Pins are
                     // closed shapes.
-                    let pin_pad = indicator_r
+                    let pin_pad = brackets
+                        .as_ref()
+                        .map_or(indicator_r, |(_, reach)| indicator_r.max(*reach))
                         + pin_layers
                             .iter()
                             .map(|s| s.extent(true))
@@ -1059,8 +1125,15 @@ where
                     );
 
                     for style in &pin_layers {
-                        for (pin_shape, pin_place) in pin_parts.iter().flatten() {
-                            fg_batch.push(pin_shape, style, *pin_place);
+                        fg_batch.push(&pin_shape, style, pin_place);
+                    }
+                    if let Some((shapes, _)) = &brackets {
+                        let stroke = Style::quad_stroke(
+                            &pin_style.color,
+                            Pattern::solid(indicator_r * BRACKET_STROKE),
+                        );
+                        for shape in shapes {
+                            fg_batch.push(shape, &stroke, pin_place);
                         }
                     }
 

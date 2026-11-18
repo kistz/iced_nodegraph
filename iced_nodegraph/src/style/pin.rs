@@ -6,7 +6,7 @@
 //! Border on/off is the `border_width` sentinel (0 = no border).
 //!
 use super::ColorQuad;
-use super::{PinFill, PinShape};
+use super::{PinBrackets, PinFill, PinShape};
 
 /// Visual style for a pin indicator, and of the hole it punches in the node
 /// body.
@@ -25,6 +25,9 @@ pub struct PinStyle {
     pub shape: PinShape,
     /// Whether the indicator is solid or a ring.
     pub fill: PinFill,
+    /// Brackets around the indicator. They reach about twice
+    /// [`radius`](Self::radius) from the pin's centre.
+    pub brackets: PinBrackets,
 
     // Cutout
     /// Radius of the circular hole this pin punches in the node body, in world

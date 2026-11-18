@@ -579,6 +579,15 @@ fn render_pin(
     shape: iced_nodegraph::PinShape,
     fill: iced_nodegraph::PinFill,
 ) -> Option<Vec<[u8; 4]>> {
+    render_pin_with(shape, fill, iced_nodegraph::PinBrackets::None)
+}
+
+/// [`render_pin`] with `brackets` around the indicator.
+fn render_pin_with(
+    shape: iced_nodegraph::PinShape,
+    fill: iced_nodegraph::PinFill,
+    brackets: iced_nodegraph::PinBrackets,
+) -> Option<Vec<[u8; 4]>> {
     use iced_nodegraph::{PinDirection, PinSide, PinStyle, default_pin_style, node_pin};
 
     let mut guard = shared()?;
@@ -605,6 +614,7 @@ fn render_pin(
             radius: 20.0,
             shape,
             fill,
+            brackets,
             // A cutout or a border would add geometry outside the indicator and
             // blur the footprint this test measures.
             cutout_radius: 0.0,
@@ -719,34 +729,44 @@ fn every_pin_shape_draws_its_own_silhouette() {
     );
 }
 
-/// A split indicator is two halves with a gap down the middle: the column
-/// through its centre is empty, the ones through the halves are not.
+/// Brackets stand left and right of the indicator, apart from it: the row
+/// through the centre is empty between the circle and each bracket, and a
+/// brace reaches further out than a square bracket with its point.
 #[test]
-fn a_split_pin_has_a_gap_down_the_middle() {
-    use iced_nodegraph::{PinFill, PinShape};
+fn brackets_stand_beside_the_pin() {
+    use iced_nodegraph::{PinBrackets, PinFill, PinShape};
 
-    let Some(split) = render_pin(PinShape::Split, PinFill::Solid) else {
-        eprintln!("no GPU adapter - skipping a_split_pin_has_a_gap_down_the_middle");
+    let render = |brackets| render_pin_with(PinShape::Circle, PinFill::Solid, brackets);
+    let Some(plain) = render(PinBrackets::None) else {
+        eprintln!("no GPU adapter - skipping brackets_stand_beside_the_pin");
         return;
     };
-    let (x0, y0, x1, y1) = magenta_box(&split);
-    let column = |x: u32| {
-        (y0..=y1)
-            .filter(|y| is_magenta(&split[(y * W + x) as usize]))
-            .count()
+    let square = render(PinBrackets::Square).expect("GPU was available a moment ago");
+    let curly = render(PinBrackets::Curly).expect("GPU was available a moment ago");
+
+    let width = |px: &[[u8; 4]]| {
+        let (x0, _, x1, _) = magenta_box(px);
+        x1 - x0 + 1
     };
-    let middle = (x0 + x1) / 2;
-    let quarter = (x1 - x0) / 4;
-    assert_eq!(column(middle), 0, "the gap is filled");
-    assert!(
-        column(x0 + quarter) > 20 && column(x1 - quarter) > 20,
-        "a half is missing"
-    );
-    let fill = magenta_box_fill(&split);
-    assert!(
-        (0.7..0.9).contains(&fill),
-        "the halves fill {fill:.3} of the box, about 0.8 expected"
-    );
+    let (plain_w, square_w, curly_w) = (width(&plain), width(&square), width(&curly));
+    // The circle is 40 px wide, the brackets stand 0.6 radii apart from it.
+    assert!((38..=42).contains(&plain_w), "{plain_w}");
+    assert!(square_w > plain_w + 25, "{square_w} {plain_w}");
+    assert!(curly_w > square_w + 10, "{curly_w} {square_w}");
+
+    // Between the circle and a bracket there is a gap.
+    let (x0, y0, x1, y1) = magenta_box(&plain);
+    let (cx, cy) = ((x0 + x1) / 2, (y0 + y1) / 2);
+    for dx in [-26i32, 26] {
+        let x = (cx as i32 + dx) as u32;
+        assert!(
+            !is_magenta(&square[(cy * W + x) as usize]),
+            "no gap at {dx}"
+        );
+    }
+    // And the brackets are taller than the circle.
+    let (_, sy0, _, sy1) = magenta_box(&square);
+    assert!(sy1 - sy0 > y1 - y0 + 10, "{} {}", sy1 - sy0, y1 - y0);
 }
 
 /// The fill is the style's choice, not the direction's: an output pin can be

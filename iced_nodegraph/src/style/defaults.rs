@@ -44,8 +44,8 @@ use iced_widget::core::{Color, Theme};
 
 use super::roles::Roles;
 use super::{
-    CuttingToolStyle, EdgeCurve, EdgeStatus, EdgeStyle, NodeStatus, NodeStyle, PinFill, PinShape,
-    PinStatus, PinStyle, SelectionBoxStyle, ramp,
+    CuttingToolStyle, EdgeCurve, EdgeStatus, EdgeStyle, NodeStatus, NodeStyle, PinBrackets,
+    PinFill, PinShape, PinStatus, PinStyle, SelectionBoxStyle, ramp,
 };
 
 /// Corner radius of a node body, in world units.
@@ -166,6 +166,7 @@ pub fn default_pin_style(theme: &Theme, status: PinStatus) -> PinStyle {
         radius: PIN_RADIUS,
         shape: PinShape::Circle,
         fill: PinFill::ByDirection,
+        brackets: PinBrackets::None,
         cutout_radius: PIN_CUTOUT_RADIUS,
         border_color: Color::TRANSPARENT.into(),
         border_width: 0.0,

@@ -43,9 +43,17 @@ pub enum PinShape {
     Circle,
     /// Square indicator, sized to the area of the circle it replaces.
     Square,
-    /// The square split down the middle into two halves with a gap between
-    /// them, for a pin which carries several of something at once.
-    Split,
+}
+
+/// Brackets drawn left and right of a pin indicator, in its color.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum PinBrackets {
+    #[default]
+    None,
+    /// `[ ]`
+    Square,
+    /// `{ }`
+    Curly,
 }
 
 /// How a pin indicator is filled.

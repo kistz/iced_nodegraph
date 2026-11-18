@@ -16,9 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   to do so. A `PinStyle` written out field by field needs the new field;
   struct-update over `default_pin_style` is unaffected.
 
-- **`PinShape::Split`**, the square cut into two halves with a gap down the
-  middle, for a pin which carries several of something at once. A `match`
-  over `PinShape` needs the new arm.
+- **`PinStyle` has a `brackets` field**, a `PinBrackets`: `None` (the
+  default), `Square` for `[ ]` or `Curly` for `{ }` drawn left and right of
+  the indicator in its color, for a pin which carries several of something
+  at once. A `PinStyle` written out field by field needs the new field.
 
 - **`iced_nodegraph_sdf` authors geometry through `Shape` alone.** `Curve`,
   `ShapeBuilder` and the `boolean` module are no longer public, and
