@@ -1021,12 +1021,22 @@ where
                     // Pin shapes are centred on the pin, and so is every
                     // primitive's origin, so the placement is just the pin
                     // position - and identical pins share a recipe.
-                    let (pin_shape, pin_place) = match pin_style.shape {
-                        crate::style::PinShape::Square => {
-                            let h = indicator_r * SQUARE_HALF_EXTENT;
-                            (Shape::rounded_box([2.0 * h, 2.0 * h], [0.0; 4]), pw)
+                    let h = indicator_r * SQUARE_HALF_EXTENT;
+                    let pin_parts: [Option<(Shape, [f32; 2])>; 2] = match pin_style.shape {
+                        crate::style::PinShape::Square => [
+                            Some((Shape::rounded_box([2.0 * h, 2.0 * h], [0.0; 4]), pw)),
+                            None,
+                        ],
+                        crate::style::PinShape::Circle => {
+                            [Some((Shape::circle(indicator_r), pw)), None]
                         }
-                        crate::style::PinShape::Circle => (Shape::circle(indicator_r), pw),
+                        // Two halves of the square, the gap between them a
+                        // fifth of its width.
+                        crate::style::PinShape::Split => {
+                            let half = Shape::rounded_box([0.8 * h, 2.0 * h], [0.0; 4]);
+                            let side = |sign: f32| [pw[0] + sign * 0.6 * h, pw[1]];
+                            [Some((half.clone(), side(-1.0))), Some((half, side(1.0)))]
+                        }
                     };
 
                     let pin_layers = pin_style.sdf_layers(pin_state.direction, indicator_r);
@@ -1049,7 +1059,9 @@ where
                     );
 
                     for style in &pin_layers {
-                        fg_batch.push(&pin_shape, style, pin_place);
+                        for (pin_shape, pin_place) in pin_parts.iter().flatten() {
+                            fg_batch.push(pin_shape, style, *pin_place);
+                        }
                     }
 
                     fg_min_x = fg_min_x.min(pin_bounds[0]);

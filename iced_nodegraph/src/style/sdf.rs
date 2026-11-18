@@ -22,7 +22,7 @@ use iced_widget::core::Color;
 
 use crate::node_pin::PinDirection;
 
-use super::{EdgeStyle, NodeStyle, PinStyle};
+use super::{EdgeStyle, NodeStyle, PinFill, PinShape, PinStyle};
 
 /// Same color with zero alpha.
 fn transparent(c: Color) -> Color {
@@ -232,9 +232,19 @@ impl PinStyle {
     /// drawn size is the styled size.
     pub(crate) fn sdf_layers(&self, direction: PinDirection, indicator_r: f32) -> Vec<Style> {
         let mut layers = Vec::with_capacity(2);
-        let fill = if direction == PinDirection::Input {
-            // Hollow ring for inputs.
-            Style::quad_stroke(&self.color, Pattern::solid(indicator_r * 0.8))
+        let ring = match self.fill {
+            PinFill::ByDirection => direction == PinDirection::Input,
+            PinFill::Solid => false,
+            PinFill::Ring => true,
+        };
+        let fill = if ring {
+            // The halves of a split indicator are narrow, a ring as wide as
+            // the one of a circle would close them up.
+            let width = match self.shape {
+                PinShape::Split => indicator_r * 0.4,
+                PinShape::Circle | PinShape::Square => indicator_r * 0.8,
+            };
+            Style::quad_stroke(&self.color, Pattern::solid(width))
         } else {
             Style::quad_band(&self.color, -1e6, 0.0)
         };

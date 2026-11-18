@@ -43,6 +43,21 @@ pub enum PinShape {
     Circle,
     /// Square indicator, sized to the area of the circle it replaces.
     Square,
+    /// The square split down the middle into two halves with a gap between
+    /// them, for a pin which carries several of something at once.
+    Split,
+}
+
+/// How a pin indicator is filled.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum PinFill {
+    /// A ring for an input, solid for an output.
+    #[default]
+    ByDirection,
+    /// Solid on either side.
+    Solid,
+    /// A ring on either side.
+    Ring,
 }
 
 /// Node status for styling purposes.

@@ -571,6 +571,14 @@ fn render_node_selection(selected: bool) -> Option<Vec<[u8; 4]>> {
 /// One node whose single Output pin is drawn as `shape` in an unmistakable
 /// magenta, big enough that its footprint spans tens of pixels.
 fn render_pin_shape(shape: iced_nodegraph::PinShape) -> Option<Vec<[u8; 4]>> {
+    render_pin(shape, iced_nodegraph::PinFill::ByDirection)
+}
+
+/// [`render_pin_shape`] with the indicator filled as `fill` says.
+fn render_pin(
+    shape: iced_nodegraph::PinShape,
+    fill: iced_nodegraph::PinFill,
+) -> Option<Vec<[u8; 4]>> {
     use iced_nodegraph::{PinDirection, PinSide, PinStyle, default_pin_style, node_pin};
 
     let mut guard = shared()?;
@@ -596,6 +604,7 @@ fn render_pin_shape(shape: iced_nodegraph::PinShape) -> Option<Vec<[u8; 4]>> {
             color: Color::from_rgb(1.0, 0.0, 1.0).into(),
             radius: 20.0,
             shape,
+            fill,
             // A cutout or a border would add geometry outside the indicator and
             // blur the footprint this test measures.
             cutout_radius: 0.0,
@@ -645,6 +654,23 @@ fn render_pin_shape(shape: iced_nodegraph::PinShape) -> Option<Vec<[u8; 4]>> {
     Some(bytes.as_chunks::<4>().0.to_vec())
 }
 
+fn is_magenta(p: &[u8; 4]) -> bool {
+    p[0] > 200 && p[2] > 200 && p[1] < 60
+}
+
+/// The bounding box of the magenta footprint, inclusive.
+fn magenta_box(px: &[[u8; 4]]) -> (u32, u32, u32, u32) {
+    let (mut x0, mut y0, mut x1, mut y1) = (W, H, 0u32, 0u32);
+    for (i, p) in px.iter().enumerate() {
+        if is_magenta(p) {
+            let (x, y) = (i as u32 % W, i as u32 / W);
+            (x0, y0, x1, y1) = (x0.min(x), y0.min(y), x1.max(x), y1.max(y));
+        }
+    }
+    assert!(x0 < x1 && y0 < y1, "pin indicator did not render");
+    (x0, y0, x1, y1)
+}
+
 /// Fraction of the magenta footprint's bounding box that the footprint covers.
 /// A disc fills PI/4 of its box; an axis-aligned square fills all of it.
 fn magenta_box_fill(px: &[[u8; 4]]) -> f32 {
@@ -690,5 +716,65 @@ fn every_pin_shape_draws_its_own_silhouette() {
         square_fill > 0.93,
         "Square filled {square_fill:.3} of its bounding box; a square covers about 1.0 - \
          it is being drawn as a disc",
+    );
+}
+
+/// A split indicator is two halves with a gap down the middle: the column
+/// through its centre is empty, the ones through the halves are not.
+#[test]
+fn a_split_pin_has_a_gap_down_the_middle() {
+    use iced_nodegraph::{PinFill, PinShape};
+
+    let Some(split) = render_pin(PinShape::Split, PinFill::Solid) else {
+        eprintln!("no GPU adapter - skipping a_split_pin_has_a_gap_down_the_middle");
+        return;
+    };
+    let (x0, y0, x1, y1) = magenta_box(&split);
+    let column = |x: u32| {
+        (y0..=y1)
+            .filter(|y| is_magenta(&split[(y * W + x) as usize]))
+            .count()
+    };
+    let middle = (x0 + x1) / 2;
+    let quarter = (x1 - x0) / 4;
+    assert_eq!(column(middle), 0, "the gap is filled");
+    assert!(
+        column(x0 + quarter) > 20 && column(x1 - quarter) > 20,
+        "a half is missing"
+    );
+    let fill = magenta_box_fill(&split);
+    assert!(
+        (0.7..0.9).contains(&fill),
+        "the halves fill {fill:.3} of the box, about 0.8 expected"
+    );
+}
+
+/// The fill is the style's choice, not the direction's: an output pin can be
+/// a ring. Measured along the row through the centre, over the middle half
+/// of the indicator, which a ring leaves open and a solid square covers.
+#[test]
+fn an_output_pin_can_be_a_ring() {
+    use iced_nodegraph::{PinFill, PinShape};
+
+    let inner = |px: &[[u8; 4]]| {
+        let (x0, y0, x1, y1) = magenta_box(px);
+        let (from, to) = (x0 + (x1 - x0) / 4, x1 - (x1 - x0) / 4);
+        let y = (y0 + y1) / 2;
+        let hits = (from..=to)
+            .filter(|x| is_magenta(&px[(y * W + x) as usize]))
+            .count();
+        hits as f32 / (to - from + 1) as f32
+    };
+    let Some(ring) = render_pin(PinShape::Square, PinFill::Ring) else {
+        eprintln!("no GPU adapter - skipping an_output_pin_can_be_a_ring");
+        return;
+    };
+    let solid =
+        render_pin(PinShape::Square, PinFill::ByDirection).expect("GPU was available a moment ago");
+    let (ring, solid) = (inner(&ring), inner(&solid));
+    assert!(ring < 0.3, "the ring covers {ring:.2} of its middle");
+    assert!(
+        solid > 0.9,
+        "an output is solid by its direction, it covers {solid:.2}"
     );
 }

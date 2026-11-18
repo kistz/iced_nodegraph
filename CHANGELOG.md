@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Breaking
 
+- **`PinStyle` has a `fill` field**, a `PinFill`: `ByDirection` (the default,
+  a ring for an input and solid for an output, as before), `Solid` or `Ring`.
+  A host which encodes something else in the fill, like whether a pin takes
+  one exact type or any of several, no longer has to give up the direction
+  to do so. A `PinStyle` written out field by field needs the new field;
+  struct-update over `default_pin_style` is unaffected.
+
+- **`PinShape::Split`**, the square cut into two halves with a gap down the
+  middle, for a pin which carries several of something at once. A `match`
+  over `PinShape` needs the new arm.
+
 - **`iced_nodegraph_sdf` authors geometry through `Shape` alone.** `Curve`,
   `ShapeBuilder` and the `boolean` module are no longer public, and
   `Segment`, `DrawableType` and `TilingType` are crate-private. They were an
